@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>闪照 SnapShot — 截图自动保存，到期自动销毁</title>
+<meta name="description" content="闪照 SnapShot：Windows 截图工具。截图直接变文件，上传申诉、发原图、阅后即焚一次搞定；临时图片到点自动删除，桌面永远干净。" />
+<link rel="icon" href="./icon.ico" />
+<style>
+  :root {
+    --bg: #0a0e18;
+    --bg2: #101828;
+    --card: #141d33;
+    --line: rgba(120, 150, 220, 0.18);
+    --txt: #eef2fb;
+    --sub: #93a0b8;
+    --blue: #5b8cff;
+    --blue2: #2b52d4;
+    --green: #34c77b;
+    --red: #ff5f5f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--txt);
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  img, svg { vertical-align: middle; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 14, 24, 0.82);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav {
+    display: flex; align-items: center; gap: 28px;
+    height: 64px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; }
+  .brand .logo {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--blue), var(--blue2));
+    display: grid; place-items: center;
+    font-size: 19px; color: #fff;
+    box-shadow: 0 4px 14px rgba(43, 82, 212, 0.5);
+  }
+  .nav .links { display: flex; gap: 24px; margin-left: auto; font-size: 15px; color: var(--sub); }
+  .nav .links a:hover { color: var(--txt); }
+  .nav .dl {
+    margin-left: 8px;
+    padding: 8px 18px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue), var(--blue2));
+    color: #fff; font-size: 15px; font-weight: 600;
+    box-shadow: 0 6px 18px rgba(43, 82, 212, 0.4);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .nav .dl:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(43, 82, 212, 0.55); }
+  @media (max-width: 720px) { .nav .links { display: none; } }
+
+  /* ===== 首屏 ===== */
+  .hero {
+    position: relative;
+    padding: 96px 0 72px;
+    text-align: center;
+    background:
+      radial-gradient(900px 500px at 50% -80px, rgba(91, 140, 255, 0.18), transparent 65%),
+      var(--bg);
+  }
+  .hero h1 {
+    font-size: 56px; font-weight: 800; letter-spacing: 1px; line-height: 1.25;
+  }
+  .hero h1 .hl {
+    background: linear-gradient(90deg, #7ea2ff, #4fd69a);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .sub {
+    margin: 18px auto 0; max-width: 720px;
+    color: var(--sub); font-size: 20px;
+  }
+  .hero .cta { margin-top: 36px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 30px; border-radius: 12px; font-size: 17px; font-weight: 600;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--blue), var(--blue2)); color: #fff;
+    box-shadow: 0 10px 30px rgba(43, 82, 212, 0.45);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(43, 82, 212, 0.6); }
+  .btn-ghost {
+    border: 1px solid var(--line); color: var(--txt); background: rgba(255,255,255,0.03);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.07); }
+  .hero .meta { margin-top: 18px; color: #6f7d99; font-size: 14px; }
+  .hero .video {
+    margin: 52px auto 0; max-width: 960px;
+    border-radius: 18px; overflow: hidden;
+    border: 1px solid var(--line);
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.55);
+    background: #0d1526;
+  }
+  .hero video { display: block; width: 100%; }
+
+  /* ===== 通用 section ===== */
+  section { padding: 84px 0; }
+  .sec-head { text-align: center; margin-bottom: 52px; }
+  .sec-head .kick {
+    display: inline-block; padding: 6px 18px; border-radius: 999px;
+    background: rgba(91, 140, 255, 0.12); border: 1px solid rgba(91, 140, 255, 0.4);
+    color: #9db9ff; font-size: 14px; letter-spacing: 4px;
+  }
+  .sec-head h2 { margin-top: 16px; font-size: 40px; font-weight: 800; }
+  .sec-head p { margin-top: 10px; color: var(--sub); font-size: 17px; }
+
+  /* ===== 痛点场景 ===== */
+  .scenes { background: var(--bg2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .scene-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  @media (max-width: 900px) { .scene-grid { grid-template-columns: 1fr; } }
+  .scene {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    padding: 30px 28px; position: relative; overflow: hidden;
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .scene:hover { transform: translateY(-4px); border-color: rgba(91, 140, 255, 0.45); }
+  .scene .icon {
+    width: 56px; height: 56px; border-radius: 15px;
+    display: grid; place-items: center; margin-bottom: 20px;
+  }
+  .scene h3 { font-size: 23px; margin-bottom: 10px; }
+  .scene p { color: var(--sub); font-size: 15.5px; }
+  .scene .old-new {
+    margin-top: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px;
+  }
+  .scene .old { color: #ff9b9b; }
+  .scene .new { color: #7fe0ae; }
+  .scene .old::before { content: "✕ 以前："; opacity: .75; }
+  .scene .new::before { content: "✓ 现在："; opacity: .75; }
+
+  /* ===== 功能 ===== */
+  .feat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  @media (max-width: 980px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .feat-grid { grid-template-columns: 1fr; } }
+  .feat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 26px 22px; text-align: center;
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .feat:hover { transform: translateY(-4px); border-color: rgba(91, 140, 255, 0.45); }
+  .feat .icon { width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 14px; display: grid; place-items: center; }
+  .feat h4 { font-size: 18px; margin-bottom: 8px; }
+  .feat p { color: var(--sub); font-size: 14px; }
+
+  /* ===== 安全说明 ===== */
+  .safe {
+    background: var(--bg2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .safe-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  @media (max-width: 900px) { .safe-grid { grid-template-columns: 1fr; } }
+  .safe .item { text-align: center; padding: 10px 18px; }
+  .safe .item .big { font-size: 44px; font-weight: 800; color: #9db9ff; }
+  .safe .item .t { margin-top: 6px; font-size: 17px; font-weight: 700; }
+  .safe .item .d { margin-top: 4px; color: var(--sub); font-size: 14.5px; }
+
+  /* ===== 价格 ===== */
+  .price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1000px; margin: 0 auto; }
+  @media (max-width: 900px) { .price-grid { grid-template-columns: 1fr; } }
+  .plan {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 34px 30px; text-align: center; position: relative;
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .plan:hover { transform: translateY(-4px); }
+  .plan.hot { border-color: rgba(91, 140, 255, 0.65); box-shadow: 0 20px 60px rgba(43, 82, 212, 0.25); }
+  .plan .tag {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    padding: 4px 16px; border-radius: 999px; font-size: 13px;
+    background: linear-gradient(135deg, var(--blue), var(--blue2)); color: #fff;
+  }
+  .plan h3 { font-size: 22px; }
+  .plan .num { margin: 14px 0 4px; font-size: 44px; font-weight: 800; }
+  .plan .num small { font-size: 16px; font-weight: 400; color: var(--sub); }
+  .plan ul { list-style: none; margin: 20px 0 26px; color: var(--sub); font-size: 15px; text-align: left; }
+  .plan li { padding: 7px 0; display: flex; gap: 10px; align-items: flex-start; }
+  .plan li::before { content: "✓"; color: var(--green); font-weight: 700; flex: none; }
+  .plan .btn { width: 100%; justify-content: center; }
+  .price-note { margin-top: 30px; text-align: center; color: #6f7d99; font-size: 14px; }
+
+  /* ===== FAQ ===== */
+  .faq { max-width: 780px; margin: 0 auto; }
+  .faq details {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px 24px; margin-bottom: 14px;
+  }
+  .faq summary { cursor: pointer; font-size: 17px; font-weight: 700; list-style: none; position: relative; padding-right: 30px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: "+"; position: absolute; right: 0; top: -2px;
+    font-size: 22px; color: #9db9ff; transition: transform .2s ease;
+  }
+  .faq details[open] summary::after { transform: rotate(45deg); }
+  .faq .a { margin-top: 12px; color: var(--sub); font-size: 15px; }
+
+  /* ===== 下载区 ===== */
+  .dl-sec {
+    text-align: center;
+    background:
+      radial-gradient(700px 380px at 50% 120%, rgba(91, 140, 255, 0.2), transparent 70%),
+      var(--bg2);
+    border-top: 1px solid var(--line);
+  }
+  .dl-sec h2 { font-size: 38px; font-weight: 800; }
+  .dl-sec p { margin-top: 10px; color: var(--sub); }
+  .dl-sec .btn { margin-top: 30px; font-size: 18px; padding: 16px 40px; }
+  .dl-sec .meta { margin-top: 14px; color: #6f7d99; font-size: 13.5px; }
+
+  /* ===== 页脚 ===== */
+  footer { border-top: 1px solid var(--line); padding: 34px 0 40px; color: #6f7d99; font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+
+  /* ===== 滚动入场动效 ===== */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.on { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand"><span class="logo">闪</span>闪照 SnapShot</div>
+    <div class="links">
+      <a href="#scenes">使用场景</a>
+      <a href="#features">功能</a>
+      <a href="#pricing">购买</a>
+      <a href="#faq">常见问题</a>
+    </div>
+    <a class="dl" href="#download">免费下载</a>
+  </div>
+</header>
+
+<!-- 首屏 -->
+<div class="hero">
+  <div class="wrap">
+    <h1>截图<span class="hl">直接变文件</span>，传完即焚</h1>
+    <p class="sub">电商申诉不支持粘贴图片？发微信要原图？验证码截图不想留痕？<br />闪照一键搞定：截图即文件 · 自动上传顺手 · 临时图到点自动删除，桌面永远干净。</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#download">免费试用 7 天</a>
+      <a class="btn btn-ghost" href="#scenes">看看解决什么问题</a>
+    </div>
+    <div class="meta">Windows 10 / 11 · 免安装绿色单文件 · 不联网不上传</div>
+    <div class="video reveal">
+      <video src="./demo.mp4" poster="./poster.jpg" controls preload="metadata"></video>
+    </div>
+  </div>
+</div>
+
+<!-- 使用场景 -->
+<section class="scenes" id="scenes">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kick">使用场景</span>
+      <h2>这些麻烦，一次解决</h2>
+      <p>每一种截图煎熬，闪照都替你走完了</p>
+    </div>
+    <div class="scene-grid">
+      <div class="scene reveal">
+        <div class="icon" style="background: rgba(91, 140, 255, 0.16);">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#7ea2ff" stroke-width="1.7"><path d="M3 4h2l2.3 10.4h10.9L21 7.2H6"/><circle cx="9.5" cy="19" r="1.6"/><circle cx="17" cy="19" r="1.6"/></svg>
+        </div>
+        <h3>电商申诉上传</h3>
+        <p>申诉页面不支持 Ctrl+V 粘贴图片，截图后还要绕道传文件、找文件。</p>
+        <div class="old-new">
+          <span class="old">截图 → 发微信助手 → 另存 → 选文件 → 翻找，约 3 分钟</span>
+          <span class="new">Ctrl+Alt+A 截图 → 上传窗里选它，约 10 秒</span>
+        </div>
+      </div>
+      <div class="scene reveal">
+        <div class="icon" style="background: rgba(52, 199, 123, 0.14);">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#4fd69a" stroke-width="1.7"><path d="M6 2.5h12v19l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4Z"/><path d="M9 7h6M9 10.5h6M9 14h4"/></svg>
+        </div>
+        <h3>微信 / QQ 发原图</h3>
+        <p>聊天窗口直接粘贴截图会被压缩糊掉，对方要的是能看清参数的原图。</p>
+        <div class="old-new">
+          <span class="old">截图工具另存 → 找到文件 → 拖进聊天，画质还没保障</span>
+          <span class="new">任意方式截图，文件自动就位，以「文件」发送即原图</span>
+        </div>
+      </div>
+      <div class="scene reveal">
+        <div class="icon" style="background: rgba(255, 95, 95, 0.13);">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ff8a8a" stroke-width="1.7"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5"/></svg>
+        </div>
+        <h3>敏感信息阅后即焚</h3>
+        <p>验证码、账户余额、后台数据……截图发完还躺在桌面和相册里，总不放心。</p>
+        <div class="old-new">
+          <span class="old">发完忘了删，敏感截图散落各处</span>
+          <span class="new">到点自动销毁，不进回收站，不留痕迹</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 功能 -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kick">核心功能</span>
+      <h2>一个小工具，把截图这件事做完</h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat reveal">
+        <div class="icon" style="background: rgba(91, 140, 255, 0.16);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7ea2ff" stroke-width="1.7"><rect x="2.5" y="6" width="19" height="12.5" rx="2.5"/><path d="M6 9.5h1M10 9.5h1M14 9.5h1M18 9.5h.5M6.5 13h.8M10 13h4.5M18 13h-.5M8 16h8"/></svg>
+        </div>
+        <h4>热键即截</h4>
+        <p>Ctrl+Alt+A 框选区域、Ctrl+Alt+S 全屏一拍，热键可自定义，永不打架。</p>
+      </div>
+      <div class="feat reveal">
+        <div class="icon" style="background: rgba(52, 199, 123, 0.14);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4fd69a" stroke-width="1.7"><rect x="5" y="4.5" width="14" height="17" rx="2.5"/><path d="M9 4.5V3.2A1.2 1.2 0 0 1 10.2 2h3.6A1.2 1.2 0 0 1 15 3.2v1.3M8.5 10h7M8.5 14h7M8.5 18h4.5"/></svg>
+        </div>
+        <h4>剪贴板监听</h4>
+        <p>Win+Shift+S、PrtSc、QQ、微信截图……进了剪贴板就自动帮你存一份。</p>
+      </div>
+      <div class="feat reveal">
+        <div class="icon" style="background: rgba(255, 184, 77, 0.14);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffc36b" stroke-width="1.7"><path d="M12 2.5 L20 5.5 V11 C20 16.5 16.8 20.3 12 21.8 C7.2 20.3 4 16.5 4 11 V5.5 Z"/><path d="M8.5 11.5 L11 14 L15.5 9"/></svg>
+        </div>
+        <h4>只删自己的</h4>
+        <p>只删除登记过的 SnapShot_ 文件，桌面上其他任何文件绝不触碰。</p>
+      </div>
+      <div class="feat reveal">
+        <div class="icon" style="background: rgba(160, 120, 255, 0.14);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b79cff" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        </div>
+        <h4>到点自动删</h4>
+        <p>删除时间按秒/分钟随意设，倒计时结束自动清理，不进回收站。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 安全 -->
+<section class="safe">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kick">放心用</span>
+      <h2>数据不出你的电脑</h2>
+    </div>
+    <div class="safe-grid">
+      <div class="item reveal">
+        <div class="big">0</div>
+        <div class="t">联网上传</div>
+        <div class="d">无账号无云端的纯本地工具，截图永不外发</div>
+      </div>
+      <div class="item reveal">
+        <div class="big">28KB</div>
+        <div class="t">绿色单文件</div>
+        <div class="d">免安装双击即用，卸载就是删掉一个文件</div>
+      </div>
+      <div class="item reveal">
+        <div class="big">7 天</div>
+        <div class="t">全功能试用</div>
+        <div class="d">不满意直接删，无需注册无需填手机号</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 价格 -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kick">购买方案</span>
+      <h2>一次截图的效率，值一杯咖啡</h2>
+      <p>支持永久买断 / 订阅 / 时长卡，按需选择</p>
+    </div>
+    <div class="price-grid">
+      <div class="plan reveal">
+        <h3>时长卡</h3>
+        <div class="num">¥19.9<small> / 30 天</small></div>
+        <ul>
+          <li>全功能无限制</li>
+          <li>首次使用起算，囤卡不亏</li>
+          <li>到期换新卡即续费</li>
+          <li>适合先试试深度用</li>
+        </ul>
+        <a class="btn btn-ghost" href="#download">购买后激活</a>
+      </div>
+      <div class="plan hot reveal">
+        <span class="tag">最受欢迎</span>
+        <h3>永久买断</h3>
+        <div class="num">¥299<small> / 一次</small></div>
+        <ul>
+          <li>终身使用，一次付费</li>
+          <li>本机永久授权</li>
+          <li>后续小版本免费更新</li>
+          <li>换电脑可重新签发</li>
+        </ul>
+        <a class="btn btn-primary" href="#download">立即购买</a>
+      </div>
+      <div class="plan reveal">
+        <h3>订阅版</h3>
+        <div class="num">¥199<small> / 年</small></div>
+        <ul>
+          <li>全功能无限制</li>
+          <li>按自然年到期</li>
+          <li>到期换新码即续费</li>
+          <li>适合团队统一采购</li>
+        </ul>
+        <a class="btn btn-ghost" href="#download">购买后激活</a>
+      </div>
+    </div>
+    <p class="price-note">激活方式：把软件里的「机器码」发给客服 → 收到注册码 → 粘贴激活，全程 1 分钟。<br />所有方案均支持 7 天免费试用后再决定。</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="scenes" id="faq">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kick">常见问题</span>
+      <h2>用之前，你可能想知道</h2>
+    </div>
+    <div class="faq">
+      <details class="reveal">
+        <summary>会不会误删我桌面上的其他文件？</summary>
+        <div class="a">不会。闪照只删除「它自己保存并登记过」的文件，且文件名必须以 SnapShot_ 开头；你的其他任何文件、图片都不会被触碰。想长期保留某张截图，改名或移走即可。</div>
+      </details>
+      <details class="reveal">
+        <summary>和 QQ / 微信截图冲突吗？</summary>
+        <div class="a">不冲突，反而互补：QQ/微信截图只进剪贴板，闪照在后台把它自动变成文件；热键若被占用会自动换备用键，也可以在设置里自定义。</div>
+      </details>
+      <details class="reveal">
+        <summary>杀毒软件提示风险怎么办？</summary>
+        <div class="a">绿色单文件程序偶尔被误报，选择「仍要运行」或加入信任即可。软件不联网、不上传任何数据，源码级行为就是：截图、存图、删自己的图。</div>
+      </details>
+      <details class="reveal">
+        <summary>换电脑 / 重装系统后授权怎么办？</summary>
+        <div class="a">注册码与机器绑定，换机后机器码会变。联系卖家报新机器码即可免费重新签发（永久版同样适用）。</div>
+      </details>
+      <details class="reveal">
+        <summary>截图文件默认保存在哪？可以改吗？</summary>
+        <div class="a">默认保存到桌面，可在设置里改为任意文件夹；自动删除时间（默认 2 分钟）、是否复制剪贴板、剪贴板监听都可以自定义。</div>
+      </details>
+      <details class="reveal">
+        <summary>退出软件后截图还会自动删除吗？</summary>
+        <div class="a">不会，自动删除需要程序在后台运行。退出时会提醒未删除的截图，下次启动 1 秒内补删过期截图。建议在设置里勾选「开机自动运行」。</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- 下载 -->
+<section class="dl-sec" id="download">
+  <div class="wrap reveal">
+    <h2>现在，让截图快 10 倍</h2>
+    <p>下载解压，双击即用 —— 7 天全功能免费试用</p>
+    <a class="btn btn-primary" href="./SnapShot_v1.0.zip" download>⬇ 下载 Windows 版</a>
+    <div class="meta">v1.0 · 约 25 KB · 支持 Windows 10 / 11</div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>© 2026 闪照 SnapShot · 截图自动保存，到期自动销毁</div>
+    <div>购买 / 激活 / 换机签发，请联系客服</div>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add("on"); io.unobserve(e.target); }
+    }
+  }, { threshold: 0.12 });
+  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+  setTimeout(() => document.querySelectorAll(".reveal").forEach((el) => el.classList.add("on")), 2500);
+</script>
+</body>
+</html>
